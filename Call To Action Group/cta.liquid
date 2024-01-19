@@ -1,0 +1,130 @@
+<div class="branch-cta-wrapper cta-btn-wrapper">
+  {% for block in section.blocks %}
+    {% assign cta = block.settings %}
+      <a
+        href="{{ cta.url }}"
+        class="cta-btn cta-btn--{{ cta.type }} cta-btn--{{ cta.size }} cta-btn--{{ cta.width }}"
+        style="grid-column: 1 / span {{ cta.column_span }}"
+      >
+        {{ cta.title }}
+      </a>
+  {% endfor %}
+</div>
+
+<style>
+@media screen and (max-width: 768px) {
+  .cta-list {
+    max-width: {{section.settings.mobile_width}}%;
+    height: {{section.settings.mobile_height}}vh;
+  }
+}
+
+@media screen and (min-width: 768px) {
+  .cta-list {
+    max-width: {{section.settings.desktop_width}}rem;
+    height: {{section.settings.desktop_height}}vh;
+  }
+}
+</style>
+{% schema %}
+{
+  "name": "Call To Action",
+  "class": "cta-list",
+  "tag": "div",
+  "presets":[{
+    "name": "Call To Action List",
+    "category": "Custom Section"
+  }],
+  "settings": [{
+      "type": "range",
+      "id": "mobile_height",
+      "label": "Max Height - Mobile",
+      "step": 1,
+      "min": 0,
+      "max": 100,
+      "default": 100,
+      "unit": "vh"
+    },{
+      "type": "range",
+      "id": "desktop_height",
+      "label": "Max Height - Desktop",
+      "step": 1,
+      "min": 0,
+      "max": 100,
+      "default": 100,
+      "unit": "vh"
+    }],
+  "blocks": [{
+    "type": "button",
+    "name": "Button",
+    "settings": [{
+      "type": "text",
+      "id": "title",
+      "label": "Text"
+    },{
+      "type": "url",
+      "id": "url",
+      "label": "URL"
+    },{
+      "type": "select",
+      "id": "type",
+      "label": "Type",
+      "options": [{
+        "value": "primary",
+        "label": "Primary"
+      },{
+        "value": "secondary",
+        "label": "Secondary"
+      },{
+        "value": "link",
+        "label": "Link"
+      },{
+        "value": "outline",
+        "label": "Outline"
+      }],
+      "default": "primary"
+    },{
+      "type": "radio",
+      "id": "size",
+      "label": "Size",
+      "options":[{
+        "value": "xs",
+        "label": "X-Small"
+      },{
+        "value": "small",
+        "label": "Small"
+      },{
+        "value": "mid",
+        "label": "Medium"
+      },{
+        "value": "lg",
+        "label": "Large"
+      },{
+        "value": "xl",
+        "label": "X-Large"
+      }],
+     "default": "mid"
+    }, {
+      "type": "select",
+      "id": "width",
+      "label": "Width",
+      "options":[{
+        "value": "auto",
+        "label": "Auto"
+      },{
+        "value": "full",
+        "label": "Full Width"
+      }],
+      "default": "auto"
+    },{
+      "type": "range",
+      "id": "column_span",
+      "label": "Column Span",
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "default": 0
+    }]
+  }]
+}
+{% endschema %}
