@@ -1,0 +1,161 @@
+{%comment%}
+Add CDN files for Swiper
+{%endcomment%}
+
+{% assign branch_images = section.blocks %}
+{% assign column_pos = section.settings.column %}
+
+{% if branch_images != blank %}
+  {% assign image_height = 500 %}
+  <div class="swiper branch__images branch__images__swiper">
+    <div class="swiper-wrapper branch__images__wrapper">
+      {% for branch_image in branch_images %}
+        <div class="swiper-slide branch__images__slide">
+          <div class="image-wrapper">
+            {% if forloop.first %}
+              {{
+                branch_image.settings.image
+                | image_url: height: image_height
+                | image_tag: class: 'slider-image', loading: 'eager', decoding: 'async', preload: true
+              }}
+            {% else %}
+              {{
+                branch_image.settings.image
+                | image_url: height: image_height
+                | image_tag: class: 'slider-image', loading: 'lazy', decoding: 'sync'
+              }}
+              <div class="swiper-lazy-preloader"></div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="swiper-button-prev"></div>
+    <div class="swiper-button-next"></div>
+    <!-- <div class="swiper-pagination"></div> -->
+    <div class="autoplay-progress">
+      <svg viewBox="0 0 48 48">
+        <circle cx="24" cy="24" r="20"></circle>
+      </svg>
+      <span></span>
+    </div>
+  </div>
+{% else %}
+  <div class="branch__images">
+    <img
+      src="https://placehold.co/1000x600"
+      alt="Default Image"
+      style="width: 100%; height: 100%; aspect-ratio: 16 / 9; object-fit: cover; object-position: center;max-height: var(--row);"
+      fetchpriority="high"
+      loading="eager"
+      width="700"
+      height="378"
+      decoding="async"
+    >
+  </div>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Swiper Image Carousel",
+  "class": "swiper-carousel",
+  "presets":[{
+    "name": "Swiper Image Carousel",
+    "category": "Custom Section"
+  }],
+  "settings": [{
+    "type": "range",
+    "id": "width",
+    "label": "Carousel Width",
+    "min": 0,
+    "max": 100,
+    "step": 1,
+    "default": 100,
+    "unit": "rem"
+  },{
+    "type": "range",
+    "id": "mobile_height",
+    "label": "Max Height - Mobile",
+    "step": 1,
+    "min": 0,
+    "max": 100,
+    "default": 100,
+    "unit": "vh"
+  },{
+    "type": "range",
+    "id": "desktop_height",
+    "label": "Max Height - Desktop",
+    "step": 1,
+    "min": 0,
+    "max": 100,
+    "default": 100,
+    "unit": "vh"
+  }],
+  "blocks": [{
+    "type": "image",
+    "name": "Image Picker",
+    "settings": [{
+      "type": "image_picker",
+      "id": "image",
+      "label": "Images"
+    }]
+  }]
+}
+{% endschema %}
+
+<style>
+.swiper-carousel {  
+  width: {{section.settings.width}}rem;
+  outline: 2px solid blue;
+}
+
+.slider-image {
+  object-fit: contain;
+  width: 100%;
+}
+@media screen and (max-width: 768px) {
+  .swiper-carousel {
+    --swiper-navigation-top-offset: calc({{section.settings.mobile_height}}vh / 2);
+    height: {{section.settings.mobile_height}}vh;
+  }
+  .slider-image {
+    max-height: {{section.settings.mobile_height}}vh;
+  }
+}
+
+@media screen and (min-width: 768px) {
+  .swiper-carousel  {
+    --swiper-navigation-top-offset: calc({{section.settings.desktop_height}}vh / 2);
+    height: {{section.settings.desktop_height}}vh;
+  }
+  .slider-image {
+    max-height: {{section.settings.desktop_height}}vh;
+  }
+}
+</style>
+
+{% javascript %}
+const progressCircle = document.querySelector(".autoplay-progress svg");
+const progressContent = document.querySelector(".autoplay-progress span");
+
+const swiper = new Swiper(".swiper", {
+  slidesPerView: 1,
+  spaceBetween: 10,
+  loop: true,
+  keyboard: {
+    enabled: true,
+    onlyInViewport: false,
+  },
+  navigation: {
+    nextEl: '.swiper-button-next',
+    prevEl: '.swiper-button-prev',
+  },
+  on: {
+    autoplayTimeLeft(s, time, progress) {
+      progressCircle.style.setProperty("--progress", 1 - progress);
+      progressContent.textContent = `${Math.ceil(time / 1000)}s`;
+    }
+  }
+});
+{% endjavascript %}
