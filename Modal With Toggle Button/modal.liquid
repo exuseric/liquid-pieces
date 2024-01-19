@@ -1,0 +1,351 @@
+<button
+  class="modal__btn modal__action cta-btn cta-btn--full cta-btn--outline--secondary cta-btn--outline cta-btn--mid cta-btn--pill cta-btn--icon"
+  style="--justify: center; --max-width: 350px;"
+  data-sku="{{ sku }}"
+  data-variant="{{ variantColor }}"
+  data-action="open"
+  data-visible="false"
+  aria-hidden="true"
+  aria-label="Open Modal"
+  aria-description="Pressing this button will open the modal."
+  focusable="false"
+  type="button"
+>
+  <span class="icon">{%comment%} Add Icon Here {%endcomment%}</span>
+  <span class="text">Show Modal</span>
+</button>
+
+<dialog class="modal_dialog" aria-live="polite">
+  <form method="dialog">
+    <span id="modal_description" class="sr-only"
+      >This is a modal for {{ title }}. Pressing the Close Modal button at the top right of the modal or pressing escape will close the
+      modal and bring you back to where you were on the page.</span
+    >
+    <div class="modal_dialog__top">
+      <header>
+        <h3 style="margin:0;color:#000; font-size: 1.563rem!important;font-weight: normal!important;display: flex;flex-flow: row nowrap;justify-content:flex-start;align-items:center;gap:0.5rem;">
+          Modal Title
+        </h3>
+        <p style="margin:0; font-size: 0.825rem;">{{ title }}</p>
+      </header>
+      <button
+        data-action="close"
+        class="modal_dialog__close-btn modal__action cta-btn cta-btn--icon cta-btn--small cta-btn--pill cta-btn--link"
+        title="Close Modal Button"
+        aria-label="Close Modal"
+        type="submit"
+      >
+        <span>Close</span>
+        <span class="icon">{%comment%} Add Icon Here {%endcomment%}</span>
+      </button>
+    </div>
+    <div class="modal_dialog__content-wrapper"></div>
+  </form>
+  {%comment%} Add Loading Icon Here {%endcomment%}
+</dialog>
+
+<template id="modal__template">
+  <div class="modal_dialog__content">
+    <h3 class="modal_dialog__content__title" style="color:#000;font-size: 1.25rem!important;"></h3>
+    <div class="modal_dialog__content__body" aria-label="List of cities">
+      <a
+        href="#"
+        class="modal_dialog__content__link cta-btn cta-btn--small cta-btn--link cta-btn--pill"
+        style="font-size: 1rem!important;"
+        focusable="false"
+      ></a>
+    </div>
+  </div>
+</template>
+
+<template id="error">
+  <div class="modal_dialog__content" style="text-align: center;">
+    <h3 class="modal_dialog__content__title error__title" style="color:#000;font-size: 1.5rem!important;"></h3>
+  </div>
+</template>
+
+<script>
+const loading = {
+  start(){
+    let parent = document.querySelector('.modal_dialog__content-wrapper');
+    document.querySelector('.loader-wrapper').style.display = "block"
+    
+    parent.childElementCount
+    while(parent.lastChild) {
+      parent.lastChild.remove();
+    }
+  },
+  stop() {
+    document.querySelector('.loader-wrapper').style.display = "none"
+  }
+}
+  
+
+async function fetchData({sku, id}) {
+    let res
+    const body = { sku }
+    loading.start()
+    const API_ENDPOINT = ''
+    try {
+        res = await fetch(API_ENDPOINT, {
+          method: 'POST',
+          body: JSON.stringify(body)
+        }).then(res => res.json())
+          console.log(res)
+
+          sessionStorage.setItem('API_RESPONSE', JSON.stringify({[sku]: res}))
+          sessionStorage.setItem('HAS_API_RESPONSE', JSON.stringify(res.length > 0))
+            const modal_btn = document.querySelector('.modal__btn')
+            if(res.length <= 0) {
+                if(modal_btn.attributes['data-action'].value === 'open') {
+                  modal_btn.setAttribute('data-visible', 'false');
+                  modal_btn.setAttribute('aria-hidden', 'false');
+                  modal_btn.setAttribute('focusable', 'false');
+                }
+            } else {
+              modal_btn.setAttribute('data-visible', 'true');
+              modal_btn.setAttribute('aria-hidden', 'true');
+              modal_btn.setAttribute('focusable', 'true');
+            }
+      } catch(err) {
+        console.error(err)
+      }
+  
+      updateTemplate({sku, id})
+      return res
+  }
+  
+  {% comment %} 
+      Assumes the response from the API has the following structure: [sku]:[{city: "", country: "", url: ""}]
+  {% endcomment %}
+async function updateTemplate({sku, id}) {
+    const exists = JSON.parse(await sessionStorage.getItem('API_RESPONSE'))
+    let data
+
+    if(exists) {
+      if(Object.entries(exists).length) data = exists[sku]
+    } else {
+      data = await fetchData({sku})
+      // data = res
+    }
+
+    let countries = new Set()
+    let cities = ''
+  
+    if(exists.length <= 0) {
+      if("content" in document.createElement("template")) {
+        const main_content_wrapper = document.querySelector(".modal_dialog__content-wrapper")
+        const template = document.querySelector("#error")
+        const clone = template.content.cloneNode(true)
+
+        let title = clone.querySelector(".error__title")
+        title.textContent = "Sorry!"
+        main_content_wrapper.appendChild(clone)
+      }
+    }
+
+    if(data.length > 0) {
+
+      data.sort((a, b) => a.city.localeCompare(b.country)).forEach(d => countries.add(d.country))
+      if("content" in document.createElement("template")) {
+        const main_content_wrapper = document.querySelector(".modal_dialog__content-wrapper");
+        const template = document.querySelector("#modal__template")
+        countries.forEach(country => {
+
+              const clone = template.content.cloneNode(true);
+              let title = clone.querySelector(".country__title")
+              let city_wrapper = clone.querySelector(".modal_dialog__content__body")
+              let country_wrapper = clone.querySelector(".modal_dialog__content")
+
+              cities = data.filter(d => d.country === country)
+              title.textContent = `${country}`
+              title.setAttribute('aria-label', `${country} country`)
+
+              cities.forEach(b => {
+                const clone2 = template.content.cloneNode(true);
+                let a_tag = clone2.querySelector(".modal_dialog__content__link")
+                a_tag.textContent = b.city
+                a_tag.href = `${window.location.origin}/pages/${b.url}`
+                a_tag.setAttribute("focusable", "true")
+                a_tag.setAttribute("aria-description", `Pressing this link will take you to a dedicated location page for ${b.city}, where you will find the directions and contact details.`)
+
+                country_wrapper.setAttribute("aria-label", `Section for ${b.country}`)
+
+                city_wrapper.setAttribute('aria-label', `List of cities in ${b.country}`)
+                city_wrapper.appendChild(a_tag)
+              })
+              let first = city_wrapper.firstElementChild
+              first.remove()
+              main_content_wrapper.appendChild(clone)
+        })
+      }
+    }
+  loading.stop()
+}
+  
+document.addEventListener("DOMContentLoaded", (event) => {
+  const sku = "{{ sku }}"
+  fetchData({sku})
+});
+
+document.querySelector(".modal__btn").addEventListener("click", (event) => {
+  document.querySelector(".modal_dialog").showModal();
+});
+</script>
+
+<style>
+.modal_dialog {
+  --padding: 0.825rem;
+  --radius: calc(var(--padding)*0.1);
+
+  width: calc(100% - 1rem);
+  height: max-content;
+  max-width: 1080px;
+  max-height: 90vh;
+
+  padding: var(--padding);
+  margin: auto;
+
+  border-radius: calc(var(--radius) + var(--padding));
+  border-color: transparent;
+  background-color: hsl(55 18% 99% / 1);
+
+  overflow-y: auto;
+  transition: all 0.4s cubic-bezier(0.46,0.03,0.52,0.96);
+}
+.modal_dialog::backdrop {
+  background-color: hsl(55 30% 5% / 0.9);
+}
+dialog::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+dialog::-webkit-scrollbar-track {
+  border-radius: 10px;
+  background: rgba(0,0,0,0.1);
+}
+dialog::-webkit-scrollbar-thumb{
+  border-radius: 10px;
+  background: rgba(0,0,0,0.2);
+}
+dialog::-webkit-scrollbar-thumb:hover{
+  background: rgba(0,0,0,0.4);
+}
+dialog::-webkit-scrollbar-thumb:active{
+  background: rgba(0,0,0,.9);
+}
+
+.modal__btn {
+  margin: 0.625rem auto;
+}
+
+.modal__btn[data-visible="true"] {
+  visibility: visible;
+}
+.modal__btn[data-visible="false"] {
+  visibility: hidden;
+}
+
+.modal_dialog__top {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  width: calc(100% - 1rem);
+  padding: clamp(0.25rem, 2vw, 0.5rem);
+
+  margin: 0 auto;
+
+  border-bottom: 2px solid hsl(55 30% 95% / 1);
+  border-radius: var(--radius);
+
+  background-color: hsl(55 30% 96% / 1);
+}
+
+.modal_dialog__top > h3 {
+  margin: 0;
+}
+
+.modal_dialog__content-wrapper {
+  position: relative;
+
+  display: flex;
+  gap: 0.825rem;
+  flex-direction: column;
+  align-items: flex-start;
+
+  margin: 1.5rem 0;
+}
+
+.modal_dialog__content {
+  display: flex;
+  flex-flow: column;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 0.8rem;
+
+  width: 100%;
+  height: 100%;
+
+  padding: clamp(1rem, 2vw, 2rem) clamp(0.2rem, 2vw, 1rem);
+
+  background: #F8F9FA;
+  border-radius: var(--radius);
+}
+
+.modal_dialog__content__title {
+  margin: 0;
+}
+
+.modal_dialog__content__body {
+  display: flex;
+  flex-flow: column wrap;
+  column-gap: 0.85rem;
+  align-items: flex-start;
+  
+  width: 100%;
+}
+
+.modal_dialog__content__link {
+  color: black;
+  text-decoration: none;
+  text-align: left;
+  font-size: 1.5rem;
+  padding: 0.25rem 0.5rem;
+
+  max-width: max-content;
+  line-height: 1;
+}
+
+@media screen and (min-width:768px) {
+  .modal__btn {
+    margin: 0.625rem 0;
+  }
+  .modal_dialog__content__body {
+    display: flex;
+    flex-flow: row wrap;
+    column-gap: 0.85rem;
+    row-gap: 1rem;
+    align-items: flex-start;
+    
+    width: 100%;
+  }
+}
+
+@supports(backdrop-filter: blur()){
+  .modal_dialog::backdrop {
+    backdrop-filter: blur(8px);
+    background-color: hsl(55 30% 5% / 0.75);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .modal_dialog {
+    scroll-behavior: smooth
+  }
+}
+</style>
