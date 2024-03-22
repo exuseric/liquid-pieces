@@ -1,0 +1,198 @@
+{% comment %} Replace with the latest leaflet version, if necessary {% endcomment %}
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin=""
+></script>
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+  crossorigin=""
+>
+{% comment %}
+  Uncomment below to use google maps tiles
+{% endcomment %}
+
+{% comment %}
+  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY"></script>
+  <script src="https://unpkg.com/leaflet.gridlayer.googlemutant@latest/dist/Leaflet.GoogleMutant.js"></script>
+{% endcomment %}
+
+{% comment %} Replace with the metaobject to loop through {% endcomment %}
+{% assign branchLocations = shop.metaobjects.branch_locations.values | sort_natural: 'title' %}
+
+<section class="leaflet-map">
+  <div id="map" class="map"></div>
+</section>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function(){
+    const markers = []
+    
+    function lMarker({location_id, coords, title, address_1, address_2, phone, schedule, place, map}){
+      let marker = L.marker([...coords], {title, icon: mapIcon, riseOnHover: true, riseOffset: 250, autoPanOnFocus: true, bubblingMouseEvents: true}).addTo(map);
+
+      marker.markerid = location_id
+      
+      marker.bindPopup(`
+      <h3 style="font-size: 0.85rem;font-weight: bold;margin-bottom: 0.15rem;max-width: 50ch;">
+        <b>${title}</b>
+      </h3>
+      <p style="margin: 0;margin-bottom: 0.15rem; max-width: 50ch;">${address_1}, ${address_2}</p>
+      <a href="tel:${phone}" style="margin: 0;margin-bottom: 0.5rem; max-width: max-content;">${phone}</a>
+      <ul style="margin: 0;padding: 0; font-size: 0.7rem; max-width: 50ch;">
+        <li><b>${schedule}</b></li>
+      </ul>
+      `)
+      markers.push(marker)
+      return marker
+    }
+    
+    let map = L.map('map', {maxZoom: 20})
+    
+    let mapIcon = L.icon({
+        iconUrl: '{{ 'map-pin-icon.svg' | asset_url }}', // URL of the icon image
+        iconSize:     [24, 32], // size of the icon
+        iconAnchor:   [0, 0], // point of the icon which will correspond to marker's location
+        popupAnchor:  [12, 0] // point from which the popup should open relative to the iconAnchor
+    });
+    
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+    
+    {% comment %} 
+      Comment above & uncomment below to use google maps tiling
+    {% endcomment %}
+    
+    {% comment %}
+      L.gridLayer.googleMutant({
+          type: "roadmap", // valid values are 'roadmap', 'satellite', 'terrain' and 'hybrid'
+      }).addTo(map);
+    {% endcomment %}
+    
+    {% for place in branchLocations %}
+      {% comment %} Replace the id with the default location to show up first {% endcomment %}
+      {% if place.location_id == 'OFYDM' %}
+        map.setView(["{{ place.coordinates | split: ',' | first | strip }}","{{ place.coordinates | split: ',' | last | strip }}"], 13)
+        lMarker({location_id: "{{ place.location_id }}",coords: ["{{ place.coordinates | split: ',' | first | strip }}","{{ place.coordinates | split: ',' | last | strip }}"],  title: "{{ place.title }}", address_1: "{{ place.address_1 }}", address_2: "{{ place.address_2 }}", phone: "{{ place.phone }}", schedule: "{{place.schedule | newline_to_br | split: " " | join: " " }}", map}).openPopup()
+      {% else %}
+        lMarker({location_id: "{{ place.location_id }}", coords: ["{{ place.coordinates | split: ',' | first | strip }}","{{ place.coordinates | split: ',' | last | strip }}"],  title: "{{ place.title }}", address_1: "{{ place.address_1 }}", address_2: "{{ place.address_2 }}", phone: "{{ place.phone }}", schedule: "{{place.schedule | newline_to_br | split: " " | join: " "}}", map})
+      {% endif %}
+    {% endfor %}
+
+    // Handle Location Click
+    const location_wrappers = document.querySelectorAll('.location__wrapper')
+    location_wrappers.forEach(location => location.addEventListener('click', function(){
+        const {coordinates, id} = this.dataset
+        const coords = [coordinates.split(',')[0], coordinates.split(',')[1]]
+        map.flyTo(coords, 18)
+        markers.find(marker => marker.markerid === id ? marker.openPopup() : null)
+    }))
+  })
+</script>
+<style>
+  .leaflet-map {
+    height: 600px;
+    min-height: max-content;
+    margin: 0 auto;
+
+    /* display: grid;
+      place-content: center; */
+
+    --map-aspect-ratio: 16 / 9;
+    --max-child-height: 600px;
+    --max-child-width: 1200px;
+
+    display: flex;
+    flex-flow: row wrap;
+    gap: 0.85rem;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    width: 100%;
+
+    position: relative;
+    z-index: 1;
+  }
+
+  .map {
+    /*
+      width: 100%;
+      height: inherit;
+      max-width: var(--max-child-width);
+      max-height: var(--max-child-height);
+
+      margin: auto 0.825rem; 
+      aspect-ratio: var(--map-aspect-ratio);
+    */
+    width: inherit;
+    height: inherit;
+
+    background: rgb(228, 204, 198);
+    background: -moz-radial-gradient(
+      circle,
+      rgba(228, 204, 198, 1) 0%,
+      rgba(231, 207, 189, 1) 51%,
+      rgba(226, 221, 219, 1) 100%
+    );
+    background: -webkit-radial-gradient(
+      circle,
+      rgba(228, 204, 198, 1) 0%,
+      rgba(231, 207, 189, 1) 51%,
+      rgba(226, 221, 219, 1) 100%
+    );
+    background: radial-gradient(
+      circle,
+      rgba(228, 204, 198, 1) 0%,
+      rgba(231, 207, 189, 1) 51%,
+      rgba(226, 221, 219, 1) 100%
+    );
+  }
+
+  .leaflet-popup-content {
+    width: max-content !important;
+    max-width: 45ch;
+  }
+
+  @media screen and (max-width: 768px) {
+    .leaflet-map {
+      --map-aspect-ratio: 9 / 16;
+      --max-child-height: 500px;
+      --max-child-width: 1200px;
+
+      height: max-content;
+    }
+    .map {
+      height: 600px;
+    }
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Leaflet Map",
+  "tag": "section",
+  "class": "leaflet-map-wrapper",
+  "presets": [
+    {
+      "name": "Leaflet Map",
+      "category": "Custom Map"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "coordinates",
+      "name": "Coordinates",
+      "settings": [
+        {
+          "type": "text",
+          "id": "coords",
+          "label": "Coordinates"
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}
